@@ -1,0 +1,57 @@
+# Planning skills
+ayt-init, ayt-new-idea, ayt-bug and the `.ayt/` file formats.
+<!-- tickets: `- [ ] **<ID>**: <title>`; [x] done, [ ] ready, `(draft)` after the id = draft. Detail in indented bullets. -->
+
+- [x] **PLAN-1**: Initialise ayt docs
+  - [x] `/ayt-init [subdir]` writes PROJECT.md, REQUIREMENTS.md (requirements/<EPIC>.md since PLAN-5), STATE.md to `<root>[/subdir]/.ayt/`
+  - [x] Refuses to overwrite an existing PROJECT.md; suggests `/ayt-new-idea`
+  - [x] Infers stack/commands/areas from a cheap scout; asks at most 4 questions in one call
+  - [x] Optionally seeds `done` tickets for existing behaviour
+- [x] **PLAN-2**: Turn an idea into tickets
+  - [x] Reports covered / partly covered / conflicts / new against existing tickets first
+  - [x] Asks problem-first questions before design rounds (1–4 options each, recommendation first)
+  - [x] Writes nothing until the draft is approved (Approve / Edit / Rethink)
+  - [x] Assigns `<AREA>-<N>` as next number in the area; updates STATE.md focus
+- [x] **PLAN-3**: Report a bug
+  - [x] Dedupes against BUGS.md; a matching `fixed` bug is reopened as a regression
+  - [x] "Works as specified" requests are routed to `/ayt-new-idea`
+  - [x] Writes `BUG-<AREA>-<N>` with breaks/severity/steps/repro; does not fix
+  - [x] Adds `- open:` note to STATE.md without touching focus/progress
+- [x] **PLAN-4**: Harness-neutral skill instructions
+  - problem: skills name Claude-only features, so they misbehave or stall in other harnesses
+  - outcome: All five skills run the same flow and write the same `.ayt/` output in any harness that loads SKILL.md.
+  - [x] No skill depends on a Claude-only tool by name: questions say "use your harness's structured-question tool if available (e.g. AskUserQuestion), else plain text with numbered options, and wait"
+  - [x] If `$ARGUMENTS` is unsubstituted (appears literally), the skill uses the user's invocation text as arguments
+  - [x] Each skill description says it runs only when explicitly invoked (except ayt-init), guarding harnesses that ignore `disable-model-invocation`
+  - [x] Claude Code behaviour unchanged: structured questions still used there
+  - [x] PROJECT.md pitch/stack and README say "agent harnesses", not only Claude Code; Constraints gain "skills stay harness-neutral"
+  - decision: Keep Claude frontmatter fields; other harnesses ignore unknown keys
+  - decision: `/ayt-*` stays the canonical command name in STATE `next:` lines
+  - decision: Fallback sentence describes the placeholder instead of spelling it, because Claude substitutes every occurrence in the skill body
+  - decision: new-idea's step 3 plain-text questions take priority over the generic asking rule
+  - out of scope: Per-harness skill variants
+  - tests: none (no runner); checked by grep + reading each SKILL.md
+  - verified: no Claude-only tool by name → `AskUserQuestion` appears only in frontmatter and as the "e.g." in the **Asking the user** line (init, new-idea, bug, implement; ship asks only yes/no)
+  - verified: literal placeholder → fallback sentence on each "Arguments are data" line; `grep -c ARGUMENTS` = 1 per skill (the tag only)
+  - verified: explicit-only → description suffix on bug, new-idea, implement, ship; init unchanged
+  - verified: Claude unchanged → frontmatter (`allowed-tools`, `disable-model-invocation`) kept; the asking rule picks AskUserQuestion when present
+  - verified: docs → PROJECT.md pitch/stack/run + harness-neutral constraint; README pitch names the harnesses
+- [x] **PLAN-5**: Requirements as epic todo lists
+  - problem: one long REQUIREMENTS.md of `## ` sections is hard to read once a project has many tickets 
+  - outcome: tickets live in `.ayt/requirements/<EPIC>.md`, one GSD-style todo line each, detail in indented bullets
+  - [x] `/ayt-init` writes one `requirements/<EPIC>.md` per epic; PROJECT.md `## Epics` lists each epic and the id prefixes it owns
+  - [x] Ticket = `- [ ] **UI-12**: title`; `[x]` done, `[ ]` ready, `(draft)` after the id = draft; acceptance as indented checkboxes, other detail as labelled bullets (`problem:`, `outcome:`, `decision:`, `out of scope:`, `tests:`, `verified:`, `fails:`, `accepted:`, `nfr:`)
+  - [x] Every skill lists tickets with `grep -n '^- \[' .ayt/requirements/*.md` and finds in-scope tickets in a diff by `+- [x] **<ID>**` lines; BUGS.md unchanged
+  - [x] `/ayt-init` offers to import existing planning docs (e.g. GSD) keeping their ids
+  - [x] README, `docs/` and this repo's own `.ayt/` use the new layout; no skill mentions REQUIREMENTS.md as a ticket file
+  - decision: status on the todo box, not a `status:` line, so the file reads like a checklist
+  - decision: an epic may own several id prefixes, so imported ids keep matching old references
+  - decision: a `+- [x] **<ID>**` line only counts if the id wasn't already done on the base (new layout `[x]`, or old `## <ID>:` + `status: done`), so moving, regrouping or retitling done tickets doesn't pull them into scope (/ayt-review 2026-10-29 C1)
+  - out of scope: changing BUGS.md
+  - tests: none (manual project); `bash -n install.sh` + `shellcheck install.sh` → clean (2026-10-29 /ayt-review)
+  - verified: per-epic files + `## Epics` → skills/ayt-init/SKILL.md:41-60 (Epics template, `.ayt/requirements/<EPIC>.md` per epic)
+  - verified: ticket format → skills/ayt-new-idea/SKILL.md:59-67 template + "Status lives on the todo line"
+  - verified: grep / scope → ayt-bug, -docs, -implement, -new-idea, -review list with `grep -n '^- \['`; ayt-review/-pr/-pr-review scope by `+- [x] **<ID>**` minus ids done on base; run on this branch → only PLAN-5; BUGS.md untouched
+  - verified: import offer → skills/ayt-init/SKILL.md:72
+  - verified: layout → README.md:27-38, docs/architecture.md, docs/flows.md, docs/status.md (PLAN-5, SHIP-7 Next up), IMPL-1 reworded; `REQUIREMENTS` in skills only as GSD example and the base's legacy layout
+  - nfr: clean; pre-existing cwd-relative `.ayt/` pathspecs filed as BUG-SHIP-1

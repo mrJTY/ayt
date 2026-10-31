@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Enable with: ./bin/setup-hooks.sh
+exec "$(git rev-parse --show-toplevel)/$(git rev-parse --show-prefix)bin/check.sh" --staged

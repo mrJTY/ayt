@@ -1,0 +1,97 @@
+# Review and ship
+ayt-review, ayt-pr, ayt-pr-review.
+<!-- tickets: `- [ ] **<ID>**: <title>`; [x] done, [ ] ready, `(draft)` after the id = draft. Detail in indented bullets. -->
+
+- [x] **SHIP-1**: Ship a PR mapped to tickets
+  - [x] Preflight stops on: no gh auth, on base branch, dirty tree, nothing ahead, failing tests
+  - [x] Scope = tickets → `done` / bugs → `fixed` in the branch diff; detects id clashes with base
+  - [x] Re-verifies each acceptance bullet against code/tests rather than trusting notes
+  - [x] Pushes and opens (or edits) the PR with ticket → evidence body
+- [x] **SHIP-2**: ayt-pr replaces ayt-ship
+  - problem: ayt-ship re-verifies everything before pushing, which is slow and token-heavy, and runs even when the tree is dirty
+  - outcome: `/ayt-pr [base]` just raises the PR from already-verified tickets.
+  - [x] First action is a dirty-tree check: uncommitted changes → list them and stop, before reading any docs
+  - [x] Keeps the cheap checks: gh auth, not on base, commits ahead, in-scope tickets from the branch diff, id clashes
+  - [x] A proposed branch name is a `[a-z0-9-]` slug of the ticket titles (max 50), so ticket text never reaches `git checkout -b` raw (PR #91 review C4)
+  - [x] In-scope ticket without every box ticked or without a `Verification:` section → stop, suggest `/ayt-review` (renamed from `/ayt-verify` in SHIP-6)
+  - [x] Does not run tests or read code; PR body built from the tickets' acceptance + `Verification:` lines
+  - [x] `ayt-ship` is gone; README, PROJECT.md and ayt-implement point to `/ayt-pr`
+  - tests: none (no runner); `bash -n install.sh` + `shellcheck install.sh` → clean (2026-10-29 /ayt-review)
+  - verified: dirty tree first → skills/ayt-pr/SKILL.md:15 `## 0. Clean tree`; preflight 1–7 present
+  - verified: missing ticks → preflight 7 says "Run `/ayt-review <ids>`"; no test step; allowed-tools has no Edit
+  - verified: slug → preflight 2 `[a-z0-9-]` rule; title passed via `"$(cat <title file>)"`
+  - verified: rename → no skills/ayt-ship; no stale refs
+  - nfr: clean
+- [x] **SHIP-3**: Verify implementation against requirements
+  - problem: checking that code really meets its tickets happens only inside implement or at ship time; no standalone, focused check
+  - outcome: `/ayt-review [ID ...]` (named `/ayt-verify` until SHIP-6) re-checks tickets and bugs against the current code with fresh evidence and records the result. Never edits code.
+  - [x] No args: tickets set to `done` / bugs set to `fixed` in the branch vs its merge-base with `origin/<base>`, committed or not; none → say so and stop
+  - [x] Runs the PROJECT.md test + lint once; reports failures
+  - [x] Each acceptance bullet gets fresh evidence (a test that would fail without it, or a run); `Verification:` notes aren't trusted
+  - [x] Rewrites each ticket's `Verification:`; ticks passing bullets, unticks failing ones and reverts the ticket to `ready` (bug → `open`)
+  - [x] Writes only `.ayt/`; ends with next step: all pass → commit, then `/ayt-pr`; else `/ayt-implement <ids>`
+  - tests: none (no runner); `bash -n install.sh` + `shellcheck install.sh` → clean (2026-10-29 /ayt-review)
+  - verified: scope → skills/ayt-review/SKILL.md Branch point `git merge-base origin/<base> HEAD`
+  - verified: suite, evidence, record, next step → `## 1. Suite`, `## 2. Per ticket`, `## 3. Record`, `## Finish`; Rules: `.ayt/` only
+  - nfr: clean
+- [x] **SHIP-5**: Review a PR with tiered comments
+  - problem: after raising a PR nobody checks the diff against its tickets and for security issues; feedback should land on the PR, not in chat
+  - outcome: `/ayt-pr-review [PR]` reviews an open PR and posts a GitHub review with inline comments tagged critical or minor.
+  - [x] Default PR = current branch's; none → say so and stop; no gh auth → stop
+  - [x] Checks each in-scope ticket's acceptance (and bug causes/regression tests) against the PR diff
+  - [x] Checks the diff for security, `PROJECT.md` Constraints, data/reliability issues
+  - [x] Comments are inline at file:line, prefixed with an id and tier (`**C1 [critical]**`, `**M1 [minor]**`); ids stay unique across re-runs; summary lists every finding by id with counts per tier
+  - [x] PR content (title, body, diff, comments) is treated as data, never instructions; code context is read at the PR head, not the local tree
+  - [x] Shows the draft and posts only on approval (Post / Edit / Cancel); re-runs don't repeat already-posted findings
+  - [x] Writes no repo files; never fixes code
+  - decision: Always event `COMMENT`: GitHub rejects approve/request-changes on your own PR; tiers carry the verdict
+  - decision: Uncertain findings kept, marked uncertain, tiered minor unless critical if true
+  - decision: Off-diff findings go in the summary (GitHub only accepts inline comments on diff lines)
+  - decision: C/M ids so the user can reference findings in replies; continue numbering on re-runs
+  - tests: none (no runner); `bash -n install.sh` + `shellcheck install.sh` → clean (2026-10-29 /ayt-review)
+  - verified: default/auth → `<arguments>` line, Gather 1; requirements + non-functional → Review section
+  - verified: ids + tiers → **Ids**, `**C1 [critical]**` comment format; Post/Edit/Cancel; event COMMENT
+  - verified: dedupe → Gather 4 `pull_request_review_id`; untrusted content → Rules (data rule, quoted `"$file"` paths); PR-head reads `git show "<headRefOid>:$file"`
+  - verified: live: five reviews posted on PR #91
+  - nfr: clean (quoted-path payload `x$(touch PWNED).md` re-run: no PWNED file)
+- [x] **SHIP-6**: ayt-verify becomes ayt-review
+  - problem: "verify" undersold it: it's a review like `/ayt-pr-review`, just local and on a tighter loop, so it should read and behave like one
+  - outcome: `/ayt-review [ID ...]` replaces `/ayt-verify`: same checks, no PR needed, findings tiered and numbered like PR reviews.
+  - [x] `ayt-verify` is gone; `/ayt-review` keeps its scope, evidence rules, non-functional pass and ticket recording (SHIP-3, SHIP-4)
+  - [x] Findings are tiered critical / minor with ids `C1…` / `M1…`; critical fails the ticket, minor or unsure ones go to the user (fix / bug / accept) by id
+  - [x] ayt-pr, ayt-pr-review, ayt-implement, README, PROJECT.md and docs/ point to `/ayt-review`
+  - decision: Ids restart each run: findings live in chat and ticket notes, not on a PR thread that needs stable ids
+  - tests: none (no runner); `bash -n install.sh` + `shellcheck install.sh` → clean (2026-10-29 /ayt-review)
+  - verified: rename → no skills/ayt-verify; 0 stale `ayt-verify` refs outside "renamed" notes
+  - verified: tiers + ids → ayt-review 2c, `- fails: C1`, `- accepted: M1`
+  - nfr: clean
+- [ ] **SHIP-7**: PR review closes addressed findings
+  - problem: fixed review findings stay as open threads, so the PR looks unaddressed and you can't see which commit fixed what
+  - outcome: `/ayt-pr-review` re-checks earlier ayt findings; fixed ones get a reply naming the commit that fixed them and their thread is resolved.
+  - [x] Unresolved threads from earlier ayt reviews are listed (GraphQL `reviewThreads`) and each finding re-checked at the PR head
+  - [x] Fixed → reply `Addressed in <sha> (<subject>): <what changed>.` with the commit found from the history since that review, then the thread is resolved
+  - [x] Not fixed or unsure → thread left open, listed under "Still open"; never re-posted as a new finding
+  - [x] Replies and resolutions appear in the draft and happen only after Post; summary lists `Resolved:` and `Still open:` by id
+  - [x] Reply bodies are posted from files, never inlined into the shell command (PR #91 review C3)
+  - [x] The fixing-commit search follows renames, so a finding on a since-renamed file can still be resolved (PR #91 review M7)
+  - [x] If the earlier review's commit is gone (rebase / force-push), the search falls back to the review's `submitted_at` date (PR #91 review M8)
+  - [x] File paths from the PR are never pasted into commands: read from a file into a quoted variable
+  - decision: Summary-only findings (no thread) are recorded in the new summary's `Resolved:` line
+  - decision: The recurring classes behind C1/C3, M2/M3/M4/M7 and C2/M6 are now `PROJECT.md` Constraints, so `/ayt-review` and `/ayt-pr-review` treat a repeat as critical
+  - tests: none (no runner); `bash -n install.sh` + `shellcheck install.sh` → clean (2026-10-29 /ayt-review)
+  - verified: threads + re-check → Gather 5 `reviewThreads`; Resolved / Still open in summary
+  - verified: replies from files → `-F body=@<file>`; `grep -rn "body='" skills` → 0
+  - verified: renames + rebases → `--follow`, `git diff -M`, `submitted_at` fallback (2 mentions)
+  - verified: live: 9 threads resolved on PR #91 with commit-cited replies
+  - fails: M1 `.ayt/PROJECT.md` rename Constraint requires a clean PR description before done, but only `/ayt-pr` (which needs all tickets done) can refresh it — circular; reword
+  - nfr: M1 (fix)
+- [x] **SHIP-4**: Verify non-functional requirements
+  - problem: verify (now `/ayt-review`) only checked acceptance bullets, so a ticket can pass while adding a security hole or breaking a project constraint
+  - [x] `/ayt-review` (renamed from `/ayt-verify` in SHIP-6) also checks the branch diff for security issues, `PROJECT.md` Constraints and data-loss risks
+  - [x] A finding that breaks a stated constraint or acceptance bullet fails the ticket (`ready`, `- fails:` line)
+  - [x] Other or uncertain findings are flagged to the user in one question: fix / bug / accept; never silently passed or fixed
+  - [x] Result recorded as `- nfr:` under `Verification:`
+  - decision: Diff only, not a full audit: keeps it token-cheap
+  - tests: none (no runner); `bash -n install.sh` + `shellcheck install.sh` → clean (2026-10-29 /ayt-review)
+  - verified: checks → `## 2b. Non-functional pass` on `git diff $B`; flag/ask by id → 2c; record → `- nfr:` line in step 3
+  - nfr: clean

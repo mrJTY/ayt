@@ -1,0 +1,100 @@
+# Install
+install.sh and README.
+<!-- tickets: `- [ ] **<ID>**: <title>`; [x] done, [ ] ready, `(draft)` after the id = draft. Detail in indented bullets. -->
+
+- [x] **INST-1**: Install skills
+  - [x] `./install.sh` symlinks every `skills/*/` into `${CLAUDE_CONFIG_DIR:-~/.claude}/skills`
+  - [x] `--project` symlinks into `<git root>/.claude/skills`
+  - [x] Re-running is idempotent (`ln -sfn`)
+- [x] **INST-2**: Install into multiple agent harnesses
+  - problem: ayt only installs into Claude Code; I want the same skills in Codex, Gemini CLI, Cursor and pi
+  - outcome: `./install.sh [--project] [claude|codex|gemini|cursor|pi|all ...]` symlinks the same skills/ into each named harness's skills dir (user or project scope).
+  - [x] No target given = claude, same paths as today (INST-1 behaviour unchanged)
+  - [x] Each named target links every skill into that harness's documented skills dir; `all` does every known target
+  - [x] Unknown target → error listing valid targets, exit non-zero, nothing linked
+  - [x] Adding a harness = adding one entry to a path table in install.sh
+  - [x] README lists supported harnesses, install command and how to invoke a skill in each
+  - decision: Symlink as-is, no per-harness build/frontmatter rewrite: one source of truth
+  - decision: Skills dir per harness verified against that harness's docs at implement time, not guessed
+  - decision: codex/gemini/cursor/pi all map to the shared `.agents/skills` (only dir Codex reads; documented by the other three), so `all` links each dir once
+  - out of scope: Auto-detecting installed harnesses
+  - out of scope: Harnesses with no skill support (AGENTS.md pointer)
+  - tests: none (no runner); manual runs with HOME=<scratch>, `bash -n` + `shellcheck install.sh` clean
+  - verified: default → `claude: linked …` into `$HOME/.claude/skills`, honours CLAUDE_CONFIG_DIR (5 links)
+  - verified: named / `all` → claude + `.agents/skills` linked once; gemini/cursor/pi print "already linked"; rerun rc=0
+  - verified: `./install.sh codex nope` → "unknown target: nope (valid: …)", rc=1, scratch HOME left empty
+  - verified: `--project gemini claude` in a scratch repo → `<root>/.agents/skills` + `<root>/.claude/skills`
+  - verified: one-entry extension → `skills_dir` case in install.sh; README has harness/dir/invoke table
+- [x] **INST-3**: List install targets; Antigravity replaces Gemini CLI
+  - problem: install.sh doesn't show which harnesses it supports or where they install; Gemini CLI is superseded by Antigravity (`agy`)
+  - [x] `./install.sh --help` / `-h` / `--list` prints usage plus each target's user and `--project` dir, exit 0
+  - [x] Unknown target prints the same list to stderr, exit non-zero, nothing linked
+  - [x] `agy` target: user `~/.gemini/antigravity-cli/skills`, project `.agents/skills`; `gemini` target removed
+  - [x] README/PROJECT.md name Antigravity instead of Gemini CLI
+  - decision: Paths from antigravity.google/docs/skills (CLI); the IDE's `~/.gemini/config/skills` not linked
+  - decision: Table now holds separate user/project dirs, since agy's differ
+  - tests: none (no runner); `bash -n` + `shellcheck install.sh` clean
+  - verified: `HOME=/home/u ./install.sh --help` → 5-row table (claude, codex, agy, cursor, pi), rc 0
+  - verified: `./install.sh gemini` → "unknown target: gemini" + table on stderr, rc 1, scratch HOME empty
+  - verified: `all` with scratch HOME → links `.claude/skills`, `.agents/skills`, `.gemini/antigravity-cli/skills`; `--project agy` → `<root>/.agents/skills`
+- [x] **INST-4**: Remove stale links from renamed skills
+  - problem: renaming a skill (ayt-ship → ayt-pr, ayt-verify → ayt-review) leaves dangling links in every harness dir
+  - [x] `./install.sh` removes `ayt-*` symlinks in each target dir that point into this repo's `skills/` but no longer resolve, and says so
+  - [x] Never touches links that resolve, links pointing elsewhere, or non-link files
+  - decision: Done by install.sh, not by hand: the rename rule in `PROJECT.md` Constraints counts installed links
+  - tests: none (no runner); `bash -n install.sh` + `shellcheck install.sh` → clean (2026-10-29 /ayt-review)
+  - verified: stale removed → scratch HOME: dangling `ayt-ship` → `claude: removed stale ayt-ship`
+  - verified: others untouched → `ayt-foreign` (outside skills/), `ayt-file` (regular file) still present; unknown target rc=1; `--list` 8 lines
+  - nfr: clean
+
+- [x] **INST-5**: Standalone public repo
+  - problem: ayt lives in a private monorepo; nobody else can clone it or knows whether they may use it
+  - outcome: copying `ayt/` to the root of a new public repo gives a working, MIT-licensed project with a README quick start
+  - [x] `LICENSE` is MIT, `Copyright (c) 2026 mrJTY`
+  - [x] README opens with a quick start (`git clone https://github.com/mrJTY/ayt`, `./install.sh`, `/ayt-init` in your project) and ends with a License section
+  - [x] Nothing outside `.ayt/` ticket history refers to `playground` or the `ayt/` subdir; a copy of the folder into a fresh scratch git repo runs `./install.sh --list` and `./install.sh --project claude` cleanly
+  - [x] `.ayt/` tidied: STATE.md reset (no personal notes), BUGS.md steps describe "docs in a subdir" generically; ticket history kept
+  - decision: the dogfooded `.ayt/` ships as a worked example
+  - out of scope: CONTRIBUTING, changelog, version tags, CI
+  - tests: none (no runner); `bash -n install.sh` + `shellcheck install.sh` → clean
+  - verified: LICENSE → MIT text, `Copyright (c) 2026 mrJTY`
+  - verified: README → `## Quick start` (clone, `./install.sh`, `/ayt-init`) after the pitch, `## License` last; also fixed the broken code fence after the ticket example
+  - verified: standalone → `grep -rnE 'playground|ayt/\.ayt|/Users/'` outside `.ayt/requirements/` → none; copied to a fresh scratch git repo: `./install.sh --list` and `./install.sh --project claude` link all 8 skills, `ayt-init/SKILL.md` resolves
+  - verified: `.ayt/` tidy → BUGS.md uses `<sub>/.ayt/`; STATE.md holds only project notes (no machine-specific steps); ticket history kept
+
+- [x] **INST-6**: Installer foot guns
+  - problem: installed skills are symlinks into the clone, so moving or deleting it silently breaks them; `ln -sfn` overwrites a user's own skill that has the same name
+  - outcome: users know the clone must stay put, and install.sh never destroys something it didn't create
+  - [x] README Install says skills are symlinks into the clone: keep it in place, `git pull` to update, re-run `install.sh` after moving it
+  - [x] An existing `ayt-*` entry that isn't a symlink (a real dir or file) is skipped with a warning naming it; the script exits 1 after linking the rest
+  - [x] An existing `ayt-*` symlink pointing elsewhere (e.g. an old clone path) is replaced and reported as `relinked (was <old target>)`
+  - [x] `bash -n` + `shellcheck` clean
+  - decision: any symlink named `ayt-*` is ours to replace; real files and dirs are never touched
+  - tests: none (no runner); `bash -n install.sh` + `shellcheck install.sh` → clean
+  - verified: README → Install paragraph: links point into the clone, `git pull` to update, re-run after moving; real files/dirs skipped
+  - verified: real dir → scratch HOME with a real `ayt-init/` dir: `skipped ayt-init: … not a symlink`, its SKILL.md untouched, other 7 linked, exit 1; clean re-run exit 0
+  - verified: old-clone link → `ayt-bug -> /old/clone/skills/ayt-bug` becomes `relinked ayt-bug … (was /old/clone/skills/ayt-bug)`, now points into this clone
+  - verified: lint → `bash -n` + `shellcheck` clean
+
+- [x] **INST-7**: Uninstall script
+  - problem: there's no clean way to remove ayt; users have to find and delete the symlinks in each harness's skills dir by hand
+  - outcome: `./uninstall.sh` removes everything install.sh linked, with the same target arguments
+  - [x] `./uninstall.sh [--project] [target ... | all]` takes the same targets and defaults as install.sh (default: claude); unknown target → usage, exit 1
+  - [x] Removes only `ayt-*` symlinks that point into this clone's `skills/` (dangling or not), printing each one removed; real files and dirs and links pointing elsewhere are left alone
+  - [x] Nothing to remove → says so per target and exits 0; never deletes the skills dir itself or the clone
+  - [x] README Install section documents it; `bash -n` + `shellcheck` clean
+  - decision: separate `uninstall.sh` (discoverable next to install.sh) sharing install.sh's target table, not a copy of it
+  - out of scope: removing `.ayt/` folders from projects
+  - decision: `uninstall.sh` is `exec install.sh --uninstall "$@"`, so both share one target table and argument parser
+  - tests: none (no runner); `bash -n` + `shellcheck install.sh uninstall.sh` → clean
+  - verified: same targets → `./uninstall.sh all` covers all 5 (shared dirs reported `already done`); `./uninstall.sh nope` → `unknown target: nope` + usage, exit 1
+  - verified: only our links → scratch HOME: removed the 8 skill links and a dangling `ayt-gone` into skills/; real dir `ayt-mine` and link `ayt-x -> /elsewhere` kept
+  - verified: nothing to remove → second run `claude: nothing to remove in ~/.claude/skills`, exit 0; skills dir kept, no dir created when absent; works when run from `/`
+  - verified: README → Install block lists `./uninstall.sh [same arguments]` plus a paragraph on what it removes
+
+- [ ] **INST-8** (draft): Harness quirks after install
+  - problem: some harnesses don't behave as the README suggests after `install.sh` (found in REL-1 audit 2026-10-29)
+  - outcome: each supported harness runs ayt skills only when invoked, and shows each skill once
+  - [ ] Codex: `allow_implicit_invocation: false` (agents/openai.yaml) so skills don't auto-run; agy has no equivalent, README says so
+  - [ ] Cursor also reads `~/.claude/skills`: after `install.sh all` each skill shows twice; README says so or install.sh avoids it
+  - [ ] Antigravity IDE (not CLI) skills dir is linked or documented as unsupported
