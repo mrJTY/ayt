@@ -95,3 +95,40 @@ ayt-review, ayt-pr, ayt-pr-review.
   - tests: none (no runner); `bash -n install.sh` + `shellcheck install.sh` → clean (2026-10-29 /ayt-review)
   - verified: checks → `## 2b. Non-functional pass` on `git diff $B`; flag/ask by id → 2c; record → `- nfr:` line in step 3
   - nfr: clean
+- [x] **SHIP-8**: ayt-dyb loops implement and review until clean
+  - problem: catching bugs before a PR means typing /ayt-implement then /ayt-review over and over by hand
+  - outcome: `/ayt-dyb [N] [ID ...]` implements the tickets, then runs up to N review passes (default 2), fixing critical findings, until a pass is clean.
+  - [x] Takes ids like `/ayt-implement` (no args: STATE focus, else all ready); a bare integer is N; no in-scope tickets → say so and stop
+  - [x] Tickets already `[x]` skip implementing; others go through `/ayt-implement`
+  - [x] Each pass is `/ayt-review`; critical findings are fixed test-first via the implement steps, minor ones are queued and not fixed
+  - [x] A clean pass ends the loop early; if pass N still has criticals, it asks: run N more / go on with them flagged / stop
+  - [x] A critical that recurs after a fix, or whose fix would change specified behaviour, is parked as open and the loop continues on the rest
+  - [x] Each review pass runs in a fresh subagent when the harness can; otherwise it prints "fresh-context review unavailable, reviewing in this context" and continues
+  - [x] Queued minor findings are asked once at the end (fix / bug / accept per id)
+  - [x] The skill runs `/ayt-implement` and `/ayt-review` by reading and following their SKILL.md (not via a skill tool) and copies no logic; `skills/ayt-dyb/SKILL.md` follows the skill Conventions; README commands/layout, docs/ and the installer list include it, each describing what it does in plain words (the name is an acronym for "do your best")
+  - decision: wrapper, not a copy, so fixes to implement/review apply here too
+  - decision: siblings are followed by reading their SKILL.md, not called through the Skill tool, because they are `disable-model-invocation` and Claude Code refuses them (found in PR #96 review C1); the user's `/ayt-dyb` is the explicit invocation
+  - decision: the "no subagents" Constraint is amended to allow only this optional fresh review pass
+  - out of scope: auto-fixing minor findings, a config file or PROJECT.md setting for N, a git proxy/worktree, CI watching
+  - tests: none (no runner); `bash -n install.sh` + `shellcheck install.sh uninstall.sh` → clean (2026-11-03 /ayt-review)
+  - verified: args/N/no tickets, skip done, per-pass review, fix/queue/park, early stop, ask at N, fresh subagent + notice (returns undecidable bullets as findings), minor asked once → skills/ayt-dyb/SKILL.md arguments paragraph, ## 1–3
+  - verified: wrapper, no copied logic → Rules ("run" = read the sibling SKILL.md and follow it; no skill tool; Skill dropped from allowed-tools; C1 fix); docs → README:34 and :57, docs/README.md, architecture.md:34/:36, flows.md, status.md:17 (M2 fix); installer links every skills/*/; no stale old-name refs; Constraints → PROJECT.md
+  - nfr: clean
+- [x] **SHIP-9**: ayt-dyb commits, opens the PR and posts a summary
+  - problem: after the loop the user still has to commit and run /ayt-pr by hand, and the PR has no record of what the loop fixed or left open
+  - outcome: once the loop ends, one yes/no commits, opens the PR with `/ayt-pr` and posts a summary comment of what was fixed and what's open.
+  - [x] Before anything is written it shows: the branch (a slug branch if on the base), the file list from `git status --short`, the commit message, and the exact comment text; one question, yes/no
+  - [x] Nothing to commit (clean tree) skips the commit and goes straight to `/ayt-pr`
+  - [x] Yes: commits those files, runs `/ayt-pr`, then posts the comment with `gh pr comment --body-file` (temp file); No: stops with "commit, then `/ayt-pr`"
+  - [x] The comment lists passes run, fixed findings by id with one line each, and open critical/minor/accepted findings; it never says "clean" while a critical is open
+  - [x] If the commit, PR or comment step fails it stops, says what exists (commit, PR URL) and prints the comment text instead of retrying
+  - [x] PROJECT.md Constraints are amended: "never commit" and "only ayt-pr-review posts" each gain the one `/ayt-dyb` exception, after the explicit yes
+  - decision: one approval covers the commit, the PR and the comment, so the user sees all outward-facing text first
+  - out of scope: inline per-finding PR comments, putting the summary in the PR body, committing without the yes
+  - tests: none (no runner); `bash -n install.sh` + `shellcheck` → clean (2026-11-03 /ayt-review)
+  - verified: preview + one yes/no, no → stop → ## 4 (branch, `git status --short -uall` with secret-looking paths flagged, message, comment text)
+  - verified: yes path stages exactly the listed paths (re-shows if status changed), commit -F file, /ayt-pr, `gh pr comment "$url"` with URL pattern check, `--body-file`; comment contents, never "clean" with an open critical; failures stop without retry → ## 4
+  - verified: Constraints → PROJECT.md commit / post exception after the explicit yes
+  - verified: nothing to commit → SKILL.md ## 4 step 0 skips staging and the commit (M1 fix)
+  - verified: pass-1 minors M1–M5 → docs/architecture.md:55/:57 and README:83 name the /ayt-dyb exceptions; SKILL.md ## 4 uses `git status --porcelain -z -uall`, leaves flagged secret-looking paths out unless the user's yes names them, and sets STATE.md before the commit (2026-11-03 /ayt-dyb pass 1, fixed once, not re-reviewed)
+  - nfr: clean

@@ -14,6 +14,7 @@
 - Test-first, resumable implementation of tickets and bug fixes; never commits [IMPL-1]
 - Local review (`/ayt-review`, no PR needed) of a branch's tickets against code with fresh evidence, findings tiered C1 / M1 [SHIP-3, SHIP-6]
 - Review includes a security / constraints pass on the diff; findings it can't settle are flagged to you [SHIP-4]
+- `/ayt-dyb [N]` implements, then loops review and fixes (default 2 passes, fresh-context reviewer when the harness has subagents); after one yes it commits, opens the PR and posts a fixed / open summary [SHIP-8, SHIP-9]
 
 **Shipping**
 - PRs that map each ticket to its evidence; stop early on a dirty tree, no re-testing [SHIP-2]

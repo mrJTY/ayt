@@ -40,10 +40,11 @@ If the stated idea is a solution, probe whether it's the right one for the under
 ## 4. How?
 Now settle the behaviour. You are a thinking partner: the user owns the *what*, you own the *how*. Never ask about things you can decide from the code.
 
-- Each round: one round of 1–4 questions, each with 2–4 concrete options, your recommendation first. Mention what you found in the code when it matters.
-- Probe hidden decisions: empty / failing / duplicate inputs, who can see or do it, limits, what happens to existing data.
-- After each round, restate the idea in one or two lines with the new decisions folded in.
-- Stop once every acceptance criterion is observable and testable, usually 1–2 rounds. If the user says "enough"/"you decide", decide sensibly and note the assumption.
+- Keep an **open-decisions list**: every choice that must be made before the ticket is testable, including hidden ones (empty / failing / duplicate inputs, who can see or do it, limits, what happens to existing data). Settle it dependency-first.
+- A decision that depends on another is asked only after its parent is settled, and alone. Independent decisions are grouped in one round of up to 4 questions.
+- Every question has 2–4 concrete options with your recommended answer first and why. Mention what you found in the code when it matters.
+- After each round, show the list in chat (settled ticked, open ones one line each) and restate the idea in one or two lines with the new decisions folded in. The list lives in chat only; write nothing before approval.
+- Stop when the list is empty and every acceptance criterion is observable and testable; there is no round limit. If the user says "enough"/"you decide", settle the remaining items yourself and record each as `decision: (assumed) …`.
 - Scope creep (a new capability, not a clarification) → don't discuss it; offer to record it as a separate `draft` ticket.
 - For a small, already-clear idea, skip this step.
 
