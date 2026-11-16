@@ -14,6 +14,9 @@ flowchart LR
   commit --> pr["/ayt-pr"]
   pr --> review["/ayt-pr-review"]
   review -- "critical findings" --> impl
+  dyb["/ayt-dyb"] -. "loops" .-> impl
+  dyb -. "loops" .-> verify
+  dyb -. "after one yes" .-> pr
 ```
 
 ## Install
@@ -70,8 +73,10 @@ sequenceDiagram
   A->>C: scout a few files
   A-->>Dev: what problem? how will we know? smallest version?
   Dev->>A: answers
-  A-->>Dev: design questions, 1-4 options each
-  Dev->>A: choices
+  loop until no open decisions
+    A-->>Dev: open-decisions list + next question(s), recommended answer first
+    Dev->>A: choices (or enough: agent assumes the rest)
+  end
   A-->>Dev: draft ticket(s)
   Dev->>A: Approve
   A->>R: append AREA-N tickets
@@ -85,11 +90,33 @@ flowchart TD
   cov -- "new / partly / conflicts" --> scout["Scout code"] --> problem["Problem questions"]
   problem --> agreed{"Problem played back and agreed?"}
   agreed -- no --> problem
-  agreed -- yes --> how["Design rounds"] --> draft["Draft tickets"]
+  agreed -- yes --> how["Grill open decisions<br/>dependency-first, until none left"] --> draft["Draft tickets"]
   draft --> review{"Approve / Edit / Rethink"}
   review -- edit --> draft
   review -- rethink --> problem
   review -- approve --> write["Write tickets + STATE"] --> stop2([End])
+```
+
+## Loop to a clean PR (`/ayt-dyb`)
+
+Wraps `/ayt-implement`, `/ayt-review` and `/ayt-pr`. Up to N review passes (default 2); commits and posts only after one yes.
+
+```mermaid
+flowchart TD
+  start([Start]) --> impl["Implement tickets not yet done"]
+  impl --> pass["Review pass (fresh subagent if available)"]
+  pass --> crit{"Critical findings?"}
+  crit -- no --> minor["Ask once about queued minor findings"]
+  crit -- yes --> fix["Fix test-first; park recurring or spec-changing ones"]
+  fix --> more{"Passes left?"}
+  more -- yes --> pass
+  more -- no --> ask{"Run N more / go on flagged / stop"}
+  ask -- more --> pass
+  ask -- flagged --> minor
+  ask -- stop --> e0([End, nothing committed])
+  minor --> yn{"Commit, PR and comment: yes?"}
+  yn -- no --> e1([Stop: commit, then /ayt-pr])
+  yn -- yes --> go["Commit, /ayt-pr, post fixed / open comment"] --> e2([PR URL])
 ```
 
 ## Report a bug (`/ayt-bug`)

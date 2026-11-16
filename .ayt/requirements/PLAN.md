@@ -55,3 +55,22 @@ ayt-init, ayt-new-idea, ayt-bug and the `.ayt/` file formats.
   - verified: import offer → skills/ayt-init/SKILL.md:72
   - verified: layout → README.md:27-38, docs/architecture.md, docs/flows.md, docs/status.md (PLAN-5, SHIP-7 Next up), IMPL-1 reworded; `REQUIREMENTS` in skills only as GSD example and the base's legacy layout
   - nfr: clean; pre-existing cwd-relative `.ayt/` pathspecs filed as BUG-SHIP-1
+- [ ] **PLAN-6**: Grill the design in new-idea
+  - problem: step 4 asks 1–2 flat rounds and stops once acceptance is testable, so a decision the user didn't think to mention can slip through to implementation
+  - outcome: step 4 of `/ayt-new-idea` keeps a visible list of open decisions and works through it dependency-first until it is empty, so hidden decisions surface before the ticket is written.
+  - [x] Step 4 shows an open-decisions list in chat each round (settled ticked, open one line each), folded into the "restate" step
+  - [x] A decision that depends on another is asked only after its parent is settled, and alone; independent decisions are grouped in one round of up to 4
+  - [x] Each question carries a recommended answer; anything decidable from the code is decided, not asked
+  - [x] Stops when the list is empty and every acceptance bullet is observable and testable; the 1–2 round guideline is removed
+  - [x] "enough" / "you decide" makes the agent settle the remaining items itself, recorded as `decision: (assumed) …` in the ticket
+  - [x] Small, already-clear ideas still skip step 4; step 3 and the draft/approve/write steps are unchanged, and nothing is written before approval
+  - [x] README's `/ayt-new-idea` line, `docs/flows.md` (design rounds) and `docs/architecture.md` describe the grilling step
+  - decision: replaces step 4's behaviour rather than adding an opt-in mode, because hidden decisions are by definition ones the user can't ask for
+  - decision: list lives in chat only, so new-idea keeps its no-writes-until-approved guarantee
+  - decision: no round cap; "enough" is the escape hatch
+  - [ ] Dogfood: run the amended skill on one real idea and record in a `verified:` line whether grilling surfaced a decision the old rounds likely wouldn't have (a judgement call, the user's)
+  - out of scope: standalone `/ayt-grill` skill, an opt-in flag, grilling step 3, persisting the list to `STATE.md`
+  - tests: none (no runner); checked by reading the SKILL.md and grep
+  - verified: list/dependency/batching/recommendation/stop/assumed bullets → skills/ayt-new-idea/SKILL.md step 4 (lines 43–47)
+  - verified: small ideas skip, step 3 + draft/approve/write untouched → step 4's last bullet and steps 3, 5, 6 unchanged in `git diff`
+  - verified: docs → README.md:27-28, docs/flows.md (sequence loop + flowchart node), docs/architecture.md:32; `grep 'Design rounds'` finds nothing; `bash -n install.sh` ok

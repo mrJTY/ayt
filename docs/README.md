@@ -19,6 +19,8 @@ ayt is a small, token-cheap planning loop for coding agents. You describe an ide
               /ayt-bug ──────────┘                 /ayt-docs any time
 ```
 
+Short on typing? `/ayt-dyb [N]` runs implement and review in a loop, then commits and opens the PR after one yes.
+
 Invocation differs by harness (`$ayt-new-idea` in Codex, `/skill:ayt-new-idea` in pi); see the main [README](../README.md#install).
 
 ## Test
